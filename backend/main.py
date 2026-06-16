@@ -64,7 +64,15 @@ class ApproveBody(BaseModel):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "ece-copilot-api"}
+    # Safe deploy diagnostics — booleans only, never the secret values. Lets you
+    # confirm from the browser whether Render actually has the env vars set.
+    return {
+        "status": "ok",
+        "service": "ece-copilot-api",
+        "app_env": os.environ.get("APP_ENV", "development"),
+        "llm_configured": bool(os.environ.get("GOOGLE_API_KEY")),
+        "supabase_configured": bool(os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_SERVICE_ROLE_KEY")),
+    }
 
 
 from graph.runner import run_graph_session
