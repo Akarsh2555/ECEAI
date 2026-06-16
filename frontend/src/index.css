@@ -1,0 +1,201 @@
+@import "tailwindcss";
+
+/* ─── ECE Copilot Master Design Tokens ───────────────────────────────────────
+ * Source: masterdesign.md — Linear (void-black canvas, hairlines) ×
+ * Voltagent (mono data, electric green) × Cursor (AI timeline pastels).
+ *
+ * The existing components use slate/indigo/emerald utility classes, so the
+ * palette is remapped here:
+ *   slate-950 → canvas #010102        slate-900 → surface-1 #0f1011
+ *   slate-800 → surface/hairline mix  slate-700 → hairline-strong #34343a
+ *   slate-500 → ink-subtle #8a8f98    slate-300 → ink-muted #d0d6e0
+ *   slate-200 → ink #f7f8f8
+ *   indigo-600 → primary #5e6ad2      indigo-500 → primary-hover #828fff
+ *   emerald-500 → electric green #00d992 (hardware-live / success)
+ *   rose-600 → semantic-error #cf2d56
+ */
+/* Postman-inspired dark theme: warm graphite surfaces + Postman orange accent.
+ * The slate ramp is remapped to Postman's dark greys and the indigo ramp to the
+ * Postman orange (#FF6C37) so every existing utility class reskins at once. */
+@theme {
+  /* Surfaces & canvas (Void black from masterdesign.md) */
+  --color-slate-950: #010102;  /* canvas / app background */
+  --color-slate-900: #0f1011;  /* surface-1 (panels, sidebars) */
+  --color-slate-850: #141516;  /* surface-2 (code blocks) */
+  --color-slate-800: #23252a;  /* surface-3 / hover + common hairline */
+  --color-slate-700: #34343a;  /* hairline-strong (inputs, cards) */
+  --color-slate-600: #6b7280;  /* dim (placeholders, idle icons) */
+  --color-slate-500: #9097a0;  /* ink-subtle */
+  --color-slate-400: #aeb4bd;
+  --color-slate-300: #c7ccd3;  /* ink-muted */
+  --color-slate-200: #edeff2;  /* ink */
+  --color-slate-100: #ffffff;
+
+  /* Primary brand (Postman orange) */
+  --color-indigo-700: #e0551f;
+  --color-indigo-600: #ff6c37;  /* primary (Postman orange) */
+  --color-indigo-500: #ff8456;  /* primary-hover */
+  --color-indigo-400: #ff9d77;
+  --color-indigo-300: #ffb99e;
+
+  /* Success (Postman green 2xx) */
+  --color-emerald-600: #3aa856;
+  --color-emerald-500: #4caf61;
+  --color-emerald-400: #6cca7c;
+
+  /* Semantic error (Postman red 4xx/5xx) */
+  --color-rose-600: #e0473e;
+  --color-rose-500: #ef5350;
+  --color-rose-400: #f47570;
+
+  /* Domain accents (signal = amber, system = cyan) */
+  --color-amber-500: #f5a623;
+  --color-amber-400: #ffbb45;
+  --color-cyan-600: #1597a8;
+  --color-cyan-500: #28b9cc;
+  --color-cyan-400: #57d2e2;
+
+  /* AI action timeline pastels (Cursor-style step chips) */
+  --color-timeline-routing: #9fbbe0;
+  --color-timeline-thinking: #f5a623;
+  --color-timeline-generating: #ff8456;
+  --color-timeline-done: #4caf61;
+
+  --font-sans: 'Inter', 'system-ui', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ─── Global Styles ─── */
+/* NOTE: do not add an unlayered `* { margin: 0; padding: 0 }` reset here.
+ * Tailwind v4 emits its utilities inside `@layer utilities`, and unlayered
+ * rules win over any layered rule — an unlayered universal reset silently
+ * overrides every padding/margin utility (pl-10, py-2.5, mb-4 …) app-wide.
+ * Tailwind's preflight already applies box-sizing and margin resets. */
+
+html, body, #root {
+  min-height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-slate-950);
+  color: var(--color-slate-200);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbar Styling ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-slate-900);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate-700);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-600);
+}
+
+/* ─── Eyebrow mono (status pills, step labels, tab kickers) ─── */
+.eyebrow-mono {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+/* ─── React Flow Overrides ─── */
+.react-flow__node {
+  border-radius: 8px;
+}
+
+.react-flow__controls {
+  background: var(--color-slate-900) !important;
+  border: 1px solid var(--color-slate-800) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: none !important;
+}
+
+.react-flow__controls button {
+  background: var(--color-slate-900) !important;
+  border-color: var(--color-slate-800) !important;
+  color: var(--color-slate-300) !important;
+  fill: var(--color-slate-300) !important;
+}
+
+.react-flow__controls button:hover {
+  background: var(--color-slate-800) !important;
+}
+
+.react-flow__minimap {
+  background: var(--color-slate-900) !important;
+  border: 1px solid var(--color-slate-800) !important;
+  border-radius: 8px !important;
+}
+
+/* ─── Panel surfaces (no shadows — depth via hairlines only) ─── */
+.glass {
+  background: rgba(15, 16, 17, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-slate-800);
+}
+
+.glass-card {
+  background: var(--color-slate-900);
+  border: 1px solid var(--color-slate-800);
+  border-radius: 12px;
+}
+
+/* Legacy glow classes — master design forbids drop shadows; depth is borders
+ * only, so these now resolve to crisp hairline emphasis. */
+.glow-indigo {
+  box-shadow: 0 0 0 1px var(--color-indigo-600);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 0 1px var(--color-emerald-500);
+}
+
+/* ─── Animations ─── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255, 108, 55, 0.35); }
+  50% { box-shadow: 0 0 0 1px rgba(255, 132, 86, 0.9); }
+}
+
+@keyframes typing-dots {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}

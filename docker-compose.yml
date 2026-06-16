@@ -1,0 +1,27 @@
+# One-command build + run of the full stack.
+#   docker compose up --build
+# Set the variables below in a root .env file (see .env.example) before running.
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      APP_ENV: production
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Vite inlines these at build time — point them at the PUBLIC backend URL.
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:8000}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

@@ -1,0 +1,115 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from fastapi import FastAPI, Depends, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from uuid import uuid4
+
+from math_service.router import router as math_router
+from sse.router import router as sse_router
+from auth.supabase_verify import verify_token
+
+app = FastAPI(
+    title="ECE Copilot API",
+    description="Backend for ECE Copilot — digital logic, analog circuits, and signal processing",
+    version="1.0.0",
+)
+
+# CORS origins: the production frontend URL(s) come from FRONTEND_URL and the
+# optional comma-separated ALLOWED_ORIGINS. Localhost dev origins are added only
+# outside production so a deployed API doesn't trust local machines.
+APP_ENV = os.environ.get("APP_ENV", "development").lower()
+_origins = {o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()}
+if os.environ.get("FRONTEND_URL"):
+    _origins.add(os.environ["FRONTEND_URL"].strip())
+if APP_ENV != "production":
+    _origins.update({
+        "http://localhost:5173", "http://localhost:5174",
+        "http://localhost:5175", "http://localhost:3000",
+    })
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=sorted(_origins) or ["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(math_router, prefix="/math", tags=["Math Service"])
+app.include_router(sse_router, prefix="/api", tags=["SSE"])
+
+
+class SubmitBody(BaseModel):
+    design_id: str
+    canvas_json: dict
+    user_message: str
+
+
+class GenerateHdlBody(BaseModel):
+    nodes: list[dict]
+    edges: list[dict]
+    intent: str | None = None
+    language: str = "verilog"
+
+
+class ApproveBody(BaseModel):
+    session_id: str
+    approved_ids: list[str]
+    rejected_ids: list[str]
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "ece-copilot-api"}
+
+
+from graph.runner import run_graph_session
+from sse.manager import sse_manager
+
+@app.post("/api/design/submit")
+async def submit_design(
+    body: SubmitBody,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(verify_token),
+):
+    session_id = str(uuid4())
+    # In production: store session in Supabase, launch LangGraph
+    # Launch the graph in background
+    background_tasks.add_task(run_graph_session, session_id, body.user_message, body.canvas_json)
+    return {"session_id": session_id}
+
+
+@app.post("/api/generate_hdl")
+async def generate_hdl_endpoint(body: GenerateHdlBody, user: dict = Depends(verify_token)):
+    """Produce production-grade, synthesizable HDL for the canvas via the LLM,
+    grounded in the deterministic topology + structural netlist. Falls back to
+    the structural Verilog when the LLM is unavailable."""
+    from math_service.netlist_eval import netlist_to_verilog, analyze_digital, NetlistRequest
+    from graph.nodes.hdl_synth import generate_industry_hdl
+
+    structural = netlist_to_verilog(body.nodes, body.edges)
+    try:
+        summary = analyze_digital(NetlistRequest(nodes=body.nodes, edges=body.edges)).get("summary", {})
+    except Exception:
+        summary = {}
+    result = generate_industry_hdl(
+        structural_hdl=structural,
+        summary=summary,
+        intent=body.intent,
+        language=body.language,
+    )
+    return result
+
+
+@app.post("/api/design/approve")
+async def approve_suggestions(
+    body: ApproveBody,
+    user: dict = Depends(verify_token),
+):
+    # Resume LangGraph with approved/rejected suggestions
+    sse_manager.resume(body.session_id, body.approved_ids, body.rejected_ids)
+    return {"status": "resumed"}
