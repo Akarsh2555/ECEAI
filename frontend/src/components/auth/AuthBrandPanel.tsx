@@ -9,13 +9,11 @@ const POINTS = [
 /** Left-hand showcase panel for the auth screens (hidden below lg). */
 export function AuthBrandPanel() {
   return (
-    <div className="hidden lg:flex flex-col justify-between w-[44%] max-w-2xl relative overflow-hidden bg-slate-900 border-r border-slate-800 p-12">
-      {/* Ambient glow + dotted grid */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 -left-10 w-96 h-96 rounded-full blur-3xl" style={{ background: 'rgba(255,108,55,0.12)' }} />
-        <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full blur-3xl" style={{ background: 'rgba(40,185,204,0.08)' }} />
-        <div className="absolute inset-0 opacity-[0.5]" style={{ backgroundImage: 'radial-gradient(#2a2f37 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
-      </div>
+    <div 
+      className="hidden lg:flex flex-col justify-between w-[44%] max-w-2xl relative overflow-hidden bg-slate-900 border-r border-slate-800 p-12"
+      style={{ backgroundImage: 'url(/login_image.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}
+    >
+      <div className="absolute inset-0 bg-slate-950/75" />
 
       <div className="relative">
         <div className="flex items-center gap-2.5">
