@@ -6,6 +6,7 @@ import { OutputTabs } from '../components/outputs/OutputTabs'
 import { BrandMark } from '../components/shared/BrandMark'
 import { useDesigns } from '../hooks/useDesigns'
 import { useCanvasStore } from '../store/canvasStore'
+import type { NetlistJSON } from '../types/canvas'
 import { useEffect, useRef, useState } from 'react'
 
 export function EditorPage() {
@@ -49,7 +50,10 @@ export function EditorPage() {
   useEffect(() => {
     if (!designId || loadedRef.current !== designId) return
     const t = setTimeout(() => {
-      updateDesign(designId, { canvas_json: useCanvasStore.getState().toNetlistJSON() }).catch(() => {})
+      // toNetlistJSON returns React Flow's generic Node[]; the DB type wants
+      // CircuitNode[] — same shape, so cast through unknown.
+      const canvas = useCanvasStore.getState().toNetlistJSON() as unknown as NetlistJSON
+      updateDesign(designId, { canvas_json: canvas }).catch(() => {})
     }, 1200)
     return () => clearTimeout(t)
   }, [nodes, edges, designId, updateDesign])
