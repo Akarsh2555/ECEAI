@@ -5,23 +5,54 @@ import { ChatSidebar } from '../components/chat/ChatSidebar'
 import { OutputTabs } from '../components/outputs/OutputTabs'
 import { BrandMark } from '../components/shared/BrandMark'
 import { useDesigns } from '../hooks/useDesigns'
-import { useEffect, useState } from 'react'
+import { useCanvasStore } from '../store/canvasStore'
+import { useEffect, useRef, useState } from 'react'
 
 export function EditorPage() {
   const { designId } = useParams<{ designId: string }>()
   const [outputHeight, setOutputHeight] = useState(280)
   const [title, setTitle] = useState<string | null>(null)
-  const { getDesign } = useDesigns()
+  const { getDesign, updateDesign } = useDesigns()
 
-  // Show the user-given design name in the header (not the raw UUID).
+  const nodes = useCanvasStore((s) => s.nodes)
+  const edges = useCanvasStore((s) => s.edges)
+  const loadFromNetlist = useCanvasStore((s) => s.loadFromNetlist)
+  const reset = useCanvasStore((s) => s.reset)
+  // Tracks which design's canvas is currently loaded, so autosave never writes
+  // one design's canvas into another during the load.
+  const loadedRef = useRef<string | null>(null)
+
+  // Load THIS design's canvas when it opens (a new design has an empty canvas,
+  // so it no longer shows the previously-open design's circuit).
   useEffect(() => {
     let cancelled = false
-    if (!designId) { setTitle(null); return }
+    loadedRef.current = null
+    if (!designId) { setTitle(null); reset(); return }
     getDesign(designId)
-      .then((d) => { if (!cancelled) setTitle(d.title) })
-      .catch(() => { if (!cancelled) setTitle(null) })
+      .then((d) => {
+        if (cancelled) return
+        setTitle(d.title)
+        const cj = d.canvas_json as { domain?: string; nodes?: unknown[]; edges?: unknown[] } | null
+        if (cj && Array.isArray(cj.nodes) && cj.nodes.length) {
+          loadFromNetlist({ domain: (cj.domain as never) ?? d.domain, nodes: cj.nodes as never, edges: (cj.edges as never) ?? [] })
+        } else {
+          reset()
+          useCanvasStore.getState().setDomain(d.domain as never)
+        }
+        loadedRef.current = designId
+      })
+      .catch(() => { if (!cancelled) { setTitle(null); reset(); loadedRef.current = designId } })
     return () => { cancelled = true }
-  }, [designId, getDesign])
+  }, [designId, getDesign, loadFromNetlist, reset])
+
+  // Debounced autosave of the canvas back to this design (after it's loaded).
+  useEffect(() => {
+    if (!designId || loadedRef.current !== designId) return
+    const t = setTimeout(() => {
+      updateDesign(designId, { canvas_json: useCanvasStore.getState().toNetlistJSON() }).catch(() => {})
+    }, 1200)
+    return () => clearTimeout(t)
+  }, [nodes, edges, designId, updateDesign])
 
   return (
     <div className="h-screen flex flex-col bg-slate-950">

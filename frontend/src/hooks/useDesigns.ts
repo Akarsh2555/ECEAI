@@ -95,12 +95,16 @@ export function useDesigns() {
       const {
         data: { user },
       } = await supabase.auth.getUser()
+      if (!user) throw new Error('You are signed out — please log in again.')
       const { data, error } = await supabase
         .from('designs')
-        .insert({ title, domain, canvas_json: canvasJson, user_id: user!.id })
+        .insert({ title, domain, canvas_json: canvasJson, user_id: user.id })
         .select()
         .single()
-      if (error) throw error
+      if (error) {
+        // Surface the real Postgres/PostgREST reason instead of "[object Object]".
+        throw new Error(error.message || error.details || error.hint || 'Insert failed')
+      }
       return data as DesignRow
     },
     []

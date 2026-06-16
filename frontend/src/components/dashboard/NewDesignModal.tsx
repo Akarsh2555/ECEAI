@@ -21,11 +21,13 @@ export function NewDesignModal({ open, onClose, onCreated }: NewDesignModalProps
   const [title, setTitle] = useState('')
   const [domain, setDomain] = useState<DomainType>('digital')
   const [creating, setCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { createDesign } = useDesigns()
   const navigate = useNavigate()
 
   const handleCreate = async () => {
     if (!title.trim()) return
+    setError(null)
     setCreating(true)
     try {
       const design = await createDesign(title.trim(), domain)
@@ -33,7 +35,9 @@ export function NewDesignModal({ open, onClose, onCreated }: NewDesignModalProps
       onClose()
       navigate(`/editor/${design.id}`)
     } catch (err) {
-      console.error('Failed to create design:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('Failed to create design:', msg, err)
+      setError(msg)
     } finally {
       setCreating(false)
     }
@@ -76,6 +80,12 @@ export function NewDesignModal({ open, onClose, onCreated }: NewDesignModalProps
             ))}
           </div>
         </div>
+
+        {error && (
+          <div className="px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300">
+            Couldn't create design: {error}
+          </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
