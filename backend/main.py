@@ -75,6 +75,35 @@ async def health():
     }
 
 
+@app.get("/api/llm_check")
+async def llm_check():
+    """Diagnostic: actually call each model in the chain ON THE SERVER and report
+    the outcome (success / quota / invalid key / timeout) with timing. No secrets
+    are returned. Useful to debug why chat falls back in a given environment."""
+    import time
+    if not os.environ.get("GOOGLE_API_KEY"):
+        return {"ok": False, "reason": "GOOGLE_API_KEY not set"}
+    from graph.nodes._llm import _MODELS
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_core.messages import HumanMessage
+
+    results = []
+    ok = False
+    for m in _MODELS:
+        t = time.time()
+        try:
+            r = await asyncio.to_thread(
+                lambda mm=m: ChatGoogleGenerativeAI(model=mm, temperature=0, max_retries=0, timeout=12)
+                .invoke([HumanMessage(content="Reply with the single word OK")])
+            )
+            results.append({"model": m, "ok": True, "elapsed_s": round(time.time() - t, 1), "text": str(r.content)[:40]})
+            ok = True
+            break
+        except Exception as e:
+            results.append({"model": m, "ok": False, "elapsed_s": round(time.time() - t, 1), "error": str(e)[:240]})
+    return {"ok": ok, "chain": _MODELS, "results": results}
+
+
 from graph.runner import run_graph_session
 from sse.manager import sse_manager
 

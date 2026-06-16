@@ -33,6 +33,11 @@ _MODELS = [m.strip() for m in os.environ.get(
 # De-dup while preserving order.
 _MODELS = list(dict.fromkeys(_MODELS))
 
+# Per-request client timeout. Generous by default because throttled hosts (e.g.
+# Render free tier) are far slower than a dev laptop — a 5 s cap there made every
+# call time out and fall back. Tune with LLM_REQUEST_TIMEOUT.
+_REQ_TIMEOUT = float(os.environ.get("LLM_REQUEST_TIMEOUT", "12"))
+
 _PLAIN_TEXT_RULE = (
     " Reply in plain conversational English. Do NOT use Markdown, headings, "
     "asterisks/bold, bullet symbols, or LaTeX/dollar-sign math; write any "
@@ -49,7 +54,7 @@ def _invoke(messages, temperature: float) -> str:
     for model in _MODELS:
         try:
             # Per-request timeout so a quota-blocked model fails fast.
-            llm = ChatGoogleGenerativeAI(model=model, temperature=temperature, max_retries=0, timeout=5)
+            llm = ChatGoogleGenerativeAI(model=model, temperature=temperature, max_retries=0, timeout=_REQ_TIMEOUT)
             resp = llm.invoke(messages)
             content = resp.content
             if isinstance(content, list):
@@ -68,9 +73,12 @@ def invoke_text(messages, temperature: float = 0.3, timeout: float = 6.0) -> str
     """Run an LLM chat call with a hard timeout. Returns text or None."""
     if not os.environ.get("GOOGLE_API_KEY"):
         return None
+    # The overall budget must let at least one per-request attempt (_REQ_TIMEOUT)
+    # finish; otherwise on slow hosts the future is cut before the model replies.
+    budget = max(timeout, _REQ_TIMEOUT + 3.0)
     future = _EXECUTOR.submit(_invoke, messages, temperature)
     try:
-        return future.result(timeout=timeout)
+        return future.result(timeout=budget)
     except Exception:
         return None  # timeout, rate-limit, or error — proceed without the LLM
 
