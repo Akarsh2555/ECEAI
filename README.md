@@ -292,74 +292,78 @@ Electo/
 
 ### Prerequisites
 
-- **Python 3.10+**
-- **Node.js 18+**
-- **Supabase account** (For JWT Authentication)
-- **LLM API Key** (Configured in backend `.env`)
+- **Docker & Docker Compose** (Recommended for full-stack deployment)
+- **Python 3.10+ & Node.js 18+** (If running locally without Docker)
+- **Supabase account** (For JWT Authentication and DB)
+- **Google Gemini API Key** (For LangGraph Agents)
+- **LangSmith API Key** (Optional, for observability)
 
-### Backend Setup
+### 🐳 Run with Docker (Recommended)
+
+Electo is fully containerized. You can spin up the entire application—frontend (Nginx) and backend (FastAPI)—with a single command:
 
 ```bash
-cd backend
+# Set up your environment variables first
+cp backend/.env.example backend/.env
+# Edit backend/.env with your API keys
 
-# Create virtual environment
+# Build and start the containers
+docker compose up --build -d
+```
+The application will be available at `http://localhost:5173` (or `8000` for backend).
+
+### Running Locally (Without Docker)
+
+#### 1. Backend Setup
+```bash
+cd backend
 python -m venv venv
 source venv/bin/activate  # or .\venv\Scripts\activate on Windows
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your API keys (see Environment Variables section)
-
-# Start the server
 python -m uvicorn main:app --reload --port 8000
 ```
 
-### Frontend Setup
-
+#### 2. Frontend Setup
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start dev server
 npm run dev
 ```
-
-The app will be available at `http://localhost:5173`.
 
 ---
 
 ## Environment Variables
 
-Create a `.env` file in the `backend/` root:
+Create a `.env` file in the `backend/` directory:
 
 ```env
-# LLM Providers
-OPENAI_API_KEY=your_api_key
-# or
-GEMINI_API_KEY=your_api_key
-
-# Supabase Auth
+# Database & Auth
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_JWT_SECRET=your_jwt_secret
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+FRONTEND_URL=http://localhost:5173
 
-# App Config
-DEBUG_MODE=true
+# LLM Provider
+GOOGLE_API_KEY=your_gemini_api_key
+
+# LangSmith Observability (Optional)
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
+LANGCHAIN_API_KEY=your_langsmith_api_key
+LANGCHAIN_PROJECT=AiECE
 ```
 
-For the frontend, create `frontend/.env`:
+For the frontend, configure these in `docker-compose.yml` or a `frontend/.env` file:
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_anon_key
-VITE_API_URL=http://localhost:8000
+VITE_BACKEND_URL=http://localhost:8000
 ```
 
 ---
 
+## License
+
+This project is licensed under the MIT License.
 
 ---
 
