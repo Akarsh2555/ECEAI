@@ -1,106 +1,371 @@
-# Electo / ECE Copilot
+<p align="center">
+  <img src="https://img.shields.io/badge/LangGraph-Agent_Orchestration-FF6C37?style=for-the-badge&logo=langchain" />
+  <img src="https://img.shields.io/badge/FastAPI-Backend_Engine-009688?style=for-the-badge&logo=fastapi" />
+  <img src="https://img.shields.io/badge/ReactFlow-Visual_Canvas-FF007A?style=for-the-badge&logo=react" />
+  <img src="https://img.shields.io/badge/Supabase-Auth_%26_Database-3ECF8E?style=for-the-badge&logo=supabase" />
+  <img src="https://img.shields.io/badge/React-Frontend-61DAFB?style=for-the-badge&logo=react" />
+</p>
 
-## Overview
-Electo (ECE Copilot) is a comprehensive, AI-native Integrated Development Environment (IDE) built specifically for Electrical and Computer Engineering (ECE). It enables engineers and students to design digital, analog, and signal processing systems on a unified, web-based visual canvas. 
+# Electo (ECE Copilot)
 
-The core of the platform is a streaming LangGraph AI Copilot that analyzes, simulates, and optimizes circuits in real-time, completely bridging the gap between schematic capture and mathematical simulation.
+**AI-native Integrated Development Environment (IDE) that designs, simulates, and optimizes hardware at the speed of thought.**
+
+Electo is a full-stack, browser-based engineering platform that unifies digital logic, analog circuits, and signal processing on a single infinite canvas. It deploys a streaming LangGraph AI agent that reads your live schematic, identifies engineering flaws, runs rigorous mathematical simulations (without LLM hallucination), and synthesizes production-ready Verilog and MATLAB code.
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Architecture Overview](#architecture-overview)
+- [LangGraph Pipeline — Deep Dive](#langgraph-pipeline--deep-dive)
+  - [Analysis Graph](#analysis-graph)
+  - [State Schema](#state-schema)
+  - [Node Descriptions](#node-descriptions)
+  - [Edge Logic & Conditional Routing](#edge-logic--conditional-routing)
+- [Deterministic Math Engine](#deterministic-math-engine)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Backend Setup](#backend-setup)
+  - [Frontend Setup](#frontend-setup)
+- [Environment Variables](#environment-variables)
+- [License](#license)
+
+---
 
 ## Features
-- **Visual Circuit Canvas:** A highly responsive drag-and-drop interface powered by ReactFlow, supporting Digital logic, Analog components, and System/DSP blocks.
-- **AI Copilot (LangGraph):** A real-time conversational agent capable of modifying the canvas, detecting errors, and providing contextual engineering analysis via Server-Sent Events (SSE).
-- **Deterministic Simulation Engine:** 
-  - *Digital:* Truth tables, K-Map minimization, asynchronous/synchronous sequential simulation (half-cycle edge-triggered timing diagrams), and automated Verilog HDL synthesis.
-  - *Analog:* DC/AC Operating Point (nodal) analysis, Bode plots, and SPICE-like simulation capabilities.
-  - *Signal/Systems:* Fast Fourier Transforms (FFTs), convolution, filter design, and MATLAB/Simulink script generation.
-- **Human-In-The-Loop (HITL):** The AI proposes Bill of Materials (BOM) optimizations, safety fixes (e.g., pull-up resistors), or architectural changes which the user must explicitly approve before they are applied to the canvas.
+
+| Capability | Description |
+|---|---|
+| **Multi-Domain Canvas** | Infinite ReactFlow workspace for Digital Gates, Analog RLC, and DSP blocks |
+| **Streaming AI Copilot** | Conversational LangGraph agent that reads the live netlist via Server-Sent Events (SSE) |
+| **Zero-Hallucination Math** | Defers all engineering math to purely deterministic Python solver arrays |
+| **Sequential Logic Engine** | Accurately simulates ripple counters with sub-cycle clock edge detection |
+| **Analog MNA Solvers** | Computes DC/AC operating points and generates frequency-domain Bode Plots |
+| **Human-In-The-Loop (HITL)** | Agent suggests architecture changes (e.g., pull-up resistors) requiring user approval |
+| **Automated Synthesis** | Compiles verified visual schematics directly into Verilog HDL and MATLAB scripts |
+| **Persistent Workspace** | Zustand + Supabase architecture ensures schemas and chat traces survive reloads |
 
 ---
 
-## System Architecture
+## Architecture Overview
 
-### Frontend
-- **Framework:** React + Vite + TailwindCSS
-- **State Management:** Zustand (utilizing `persist` middleware for deep session and canvas persistence across reloads)
-- **Interactive Canvas:** `@xyflow/react` (React Flow)
-- **Auth & Database:** Supabase (for user authentication and project persistence)
-
-### Backend (LangGraph Pipeline)
-- **Framework:** FastAPI
-- **Agent Orchestration:** LangGraph (StateGraph)
-- **LLM Integration:** Advanced LLM providers for conversational routing, insight generation, and code synthesis.
-- **Math Service:** Deterministic Python solvers for guaranteed engineering accuracy (ensuring the LLM never hallucinates mathematical outputs).
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                        Frontend (React + Vite)                  │
+│  ┌──────────┐   ┌──────────────┐   ┌──────────────────────┐    │
+│  │   Chat   │   │ Canvas (IDE) │   │  Output / Timing     │    │
+│  │ Copilot  │   │ (ReactFlow)  │   │  Diagram Viewer      │    │
+│  └────┬─────┘   └──────┬───────┘   └──────────┬───────────┘    │
+│       │                │                       │               │
+│       └────────────────┼───────────────────────┘               │
+│                        │  Axios + SSE (JWT Auth)               │
+└────────────────────────┼───────────────────────────────────────┘
+                         │
+┌────────────────────────┼───────────────────────────────────────┐
+│                  FastAPI Backend (Python)                       │
+│                        │                                       │
+│  ┌─────────────────────┼─────────────────────────────────┐     │
+│  │              API Layer (REST + SSE)                    │     │
+│  │       /chat/stream    /compile/hdl    /math/solve     │     │
+│  └─────────────────────┬─────────────────────────────────┘     │
+│                        │                                       │
+│  ┌─────────────────────┼─────────────────────────────────┐     │
+│  │          LangGraph Orchestration Engine                │     │
+│  │                                                       │     │
+│  │  ┌──────────┐    ┌────────┐┌────────┐┌─────────┐     │     │
+│  │  │ Ingest   │───▶│ DigVal ││ AnaVal ││ SysSim  │     │     │
+│  │  └──────────┘    └──┬─────┘└──┬─────┘└────┬────┘     │     │
+│  │                     │         │           │           │     │
+│  │                     ▼         ▼           ▼           │     │
+│  │               ┌─────────┐┌─────────┐   [ END ]        │     │
+│  │               │ DigAna  ││ AnaAna  │                  │     │
+│  │               └────┬────┘└────┬────┘                  │     │
+│  │                    └────┬─────┘                       │     │
+│  │                         ▼                             │     │
+│  │                    ┌──────────┐   SSE Suggestion      │     │
+│  │                    │   HITL   │ ─────────────────▶    │     │
+│  │                    └────┬─────┘                       │     │
+│  │                         ▼                             │     │
+│  │                    ┌──────────┐                       │     │
+│  │                    │ Compiler │ → Verilog / MATLAB    │     │
+│  │                    └──────────┘                       │     │
+│  └───────────────────────────────────────────────────────┘     │
+│                        │                                       │
+│  ┌─────────────────────┼─────────────────────────────────┐     │
+│  │           Deterministic Math Service Layer            │     │
+│  │   netlist_eval.py │ dc_analysis.py │ filter_design.py │     │
+│  └───────────────────────────────────────────────────────┘     │
+└────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## LangGraph Pipeline Structure
+## LangGraph Pipeline — Deep Dive
 
-The backend orchestrates intelligence through a directed acyclic state graph (LangGraph). When a user submits a query or requests an analysis, the state is passed through the following pipeline:
+Electo relies on a single, highly specialized LangGraph state machine to orchestrate intent routing, validation, deterministic simulation, and user approval.
+
+### Analysis Graph
+
+Triggered whenever a user submits a query via the chat or clicks "Analyze" on the canvas.
 
 ```mermaid
 graph TD
-    User([User Input + Netlist]) --> Ingestion[ingestion_router]
-    
-    Ingestion -- Domain: Digital --> DigVal[digital_validator]
-    Ingestion -- Domain: Analog --> AnaVal[analog_validator]
-    Ingestion -- Domain: System --> SysSim[system_simulator]
-    Ingestion -- Conversational --> Chat[chat_responder]
+    A["📥 ingestion_router"] -->|"domain = digital"| B["🔎 digital_validator"]
+    A -->|"domain = analog"| C["⚡ analog_validator"]
+    A -->|"domain = system"| D["📻 system_simulator"]
+    A -->|"conversational"| E["💬 chat_responder"]
 
-    DigVal -- Valid --> DigAna[logic_analyzer]
-    DigVal -- Needs Setup/Fixes --> HITL[hitl]
-    DigAna --> HITL
+    B -->|"valid"| F["🧮 logic_analyzer"]
+    B -->|"errors/suggestions"| G["🛑 hitl (Human-in-Loop)"]
+    F --> G
 
-    AnaVal -- Valid --> AnaAna[analog_analyzer]
-    AnaVal -- Needs Setup/Fixes --> HITL
-    AnaAna --> HITL
+    C -->|"valid"| H["📈 analog_analyzer"]
+    C -->|"errors/suggestions"| G
+    H --> G
 
-    HITL -- User Approves/Rejects --> Compiler[hdl_compiler / script_generator]
-    HITL -- Stop --> End([END])
+    G -->|"approved digital"| I["📦 hdl_compiler"]
+    G -->|"approved analog"| J["📜 script_generator"]
+    G -->|"rejected / done"| K["END"]
 
-    SysSim --> End
-    Chat --> End
-    Compiler --> End
+    D --> K
+    E --> K
+    I --> K
+    J --> K
+
+    style A fill:#1a1a2e,stroke:#e94560,color:#fff
+    style B fill:#2d1b2e,stroke:#8b5cf6,color:#fff
+    style C fill:#1b2e1b,stroke:#22c55e,color:#fff
+    style D fill:#1b1b2e,stroke:#3b82f6,color:#fff
+    style E fill:#1b2e2e,stroke:#06b6d4,color:#fff
+    style F fill:#2d1b2e,stroke:#8b5cf6,color:#fff
+    style H fill:#1b2e1b,stroke:#22c55e,color:#fff
+    style G fill:#2e2b1b,stroke:#f59e0b,color:#fff
+    style I fill:#1a1a2e,stroke:#ec4899,color:#fff
+    style J fill:#1a1a2e,stroke:#ec4899,color:#fff
+    style K fill:#0f0f0f,stroke:#666,color:#fff
 ```
 
-### Core Pipeline Nodes
-1. **`ingestion_router`**: The entry point. Extracts the domain, parses user intent, and determines whether the user wants a simple chat response or a full mathematical simulation pipeline.
-2. **`digital_validator` / `analog_validator`**: Scans the current netlist graph for common engineering errors (e.g., floating inputs, missing grounds, short circuits). If errors are fixable, it generates a list of suggestions and routes directly to the HITL node.
-3. **`logic_analyzer` / `analog_analyzer`**: Interfaces with the deterministic math solvers (e.g., truth table generator, DC matrix solver). Passes the calculated data back to the LLM to generate human-readable insights (e.g., "This topology acts as an active high-pass filter").
-4. **`system_simulator`**: Directly simulates DSP and communication systems blocks.
-5. **`chat_responder`**: Provides immediate conversational answers using the active netlist as context without running heavy simulations.
-6. **`hitl` (Human-in-the-Loop)**: Pauses graph execution. Yields a structured suggestion (e.g., "Add 10k pull-up resistor to pin 4") to the frontend via SSE. Waits for the user to click "Accept" or "Reject" before applying the patch to the netlist state.
-7. **`hdl_compiler` / `script_generator`**: After approvals or final analysis, synthesizes deployable engineering code (Verilog HDL or MATLAB scripts) based on the refined netlist.
+### State Schema
+
+```python
+class GraphState(TypedDict):
+    # Context
+    session_id: str
+    raw_input: str | dict           # User's chat message or run command
+    netlist: dict                   # Live JSON payload from ReactFlow
+    
+    # Execution control
+    domain: Optional[Literal["digital", "analog", "system"]]
+    
+    # Tracking
+    validation_errors: list[str]    # Accumulates structural flaws (e.g. floating grounds)
+    suggestions: list[dict]         # [{id, description, patch_payload}]
+    user_approvals: list[str]       # IDs of suggestions the user clicked "Accept" on
+    
+    # Output
+    artifacts: dict                 # Extracted arrays (hdl_code, truth_table, bode_data)
+    history: list[dict]             # Full trace for SSE
+```
+
+### Node Descriptions
+
+| Node | Agent Type | Purpose |
+|---|---|---|
+| `ingestion_router` | Router LLM | Determines circuit domain and decides if a full mathematical analysis is required vs a simple chat response. |
+| `digital_validator` | Expert LLM | Scans JSON netlists for digital flaws (e.g., disconnected clocks, combinational loops). |
+| `logic_analyzer` | Math Bridge | Passes netlist to Python `netlist_eval.py`. Interprets truth tables and timing arrays back into English for the user. |
+| `analog_analyzer` | Math Bridge | Passes netlist to Python `dc_analysis.py`. Interprets MNA operating points and AC frequency responses. |
+| `hitl` | Interrupt Node | Suspends the LangGraph run. Streams a diff/suggestion to the frontend. Resumes when the user clicks Accept/Reject. |
+| `chat_responder` | Conversational | Simple RAG against the current netlist components. |
+| `hdl_compiler` | Synthesis | Transforms verified digital netlists into structural Verilog code. |
+
+### Edge Logic & Conditional Routing
+
+```python
+def route_after_validation(state) -> str:
+    # If the validator caught unfixable errors or generated structural suggestions
+    # that require user permission, bypass the heavy math solvers and go straight
+    # to the Human-in-the-Loop node to ask for approval.
+    if state.get("validation_errors") or state.get("suggestions"):
+        return "hitl"
+        
+    # Otherwise, it's a clean circuit. Proceed to deterministic analysis.
+    domain = state.get("domain")
+    if domain == "digital":
+        return "logic_analyzer"
+    return "analog_analyzer"
+```
 
 ---
 
-## Math & Simulation Engine (`math_service/`)
+## Deterministic Math Engine
 
-To ensure high fidelity, the AI does *not* guess mathematical behavior. Instead, the backend relies on a suite of purely deterministic Python modules:
-- **`netlist_eval.py`**: Robust sequential and combinational logic simulation. Supports sub-cycle edge detection for accurate asynchronous ripple counters, plus sequential Verilog generation.
-- **`truth_table.py` & `kmap_minimize.py`**: Boolean algebra simplifications and Quine-McCluskey minimizations.
-- **`dc_analysis.py` & `ac_analysis.py`**: Modified Nodal Analysis (MNA) for evaluating analog circuits.
-- **`bode.py`**: Frequency response and transfer function plotting.
-- **`fft.py` & `filter_design.py`**: Digital Signal Processing (DSP) analysis toolkit.
-- **`bom.py`**: Cost and component optimization for hardware deployment.
+To ensure maximum engineering accuracy, Electo completely prevents the LLM from executing arithmetic or guessing signal behavior. Instead, the `math_service` directory acts as a dedicated physics engine.
+
+| Solver Module | Capabilities |
+|---|---|
+| `netlist_eval.py` | Synchronous/Asynchronous evaluation, sub-cycle clock edge detection (for ripple counters), state-machine unrolling. |
+| `dc_analysis.py` | Modified Nodal Analysis (MNA), solving Kirchhoff's Current Law matrices via NumPy. |
+| `truth_table.py` | Boolean expression parsing, minterm extraction. |
+| `kmap_minimize.py` | Quine-McCluskey exact minimization logic. |
+| `filter_design.py` | Butterworth/Chebyshev coefficient generation and FFT handling. |
 
 ---
 
-## Local Development
+## Tech Stack
 
-### 1. Start the Backend
-The backend runs on FastAPI and uses Uvicorn for local hosting.
+| Layer | Technology |
+|---|---|
+| **LLM Inference** | Advanced Conversational Providers (Gemini / Anthropic) |
+| **Orchestration** | LangGraph (StateGraph with interrupt/resume mechanics) |
+| **Backend API** | FastAPI + Uvicorn |
+| **Visual Canvas** | `@xyflow/react` (React Flow) |
+| **State Management** | Zustand (with localStorage persistence middleware) |
+| **Math Solvers** | Python (NumPy, SciPy) |
+| **Database & Auth** | Supabase (PostgreSQL + JWT) |
+| **Frontend UI** | React 18 + Vite + TailwindCSS + Lucide Icons |
+| **Streaming** | SSE (Server-Sent Events) via Starlette |
+
+---
+
+## Project Structure
+
+```text
+Electo/
+├── frontend/                     # React + Vite Client Application
+│   ├── public/                   # Static assets (images, icons)
+│   └── src/
+│       ├── components/           # Reusable UI Architecture
+│       │   ├── auth/             # Brand panels & login handling
+│       │   ├── canvas/           # React Flow nodes (GateNode, AnalogNode, etc.)
+│       │   ├── chat/             # LangGraph SSE chat interface & Suggestion Cards
+│       │   ├── dashboard/        # Grid layouts & project routing
+│       │   ├── outputs/          # TimingDiagramPanel, HdlCodePanel, TruthTablePanel
+│       │   └── shared/           # Design System (Buttons, Spinners)
+│       ├── hooks/                # Custom React Hooks
+│       │   ├── useSSE.ts         # Handles graph stream consumption
+│       │   ├── useAuth.ts        # Supabase session state
+│       │   └── useMathApi.ts     # Direct REST triggers for solvers
+│       ├── lib/                  # Utilities (Tailwind merge, styling helpers)
+│       ├── pages/                # Top-level route components
+│       ├── store/                # Zustand State Management
+│       │   ├── canvasStore.ts    # Persisted Netlist/Canvas arrays
+│       │   └── sessionStore.ts   # Persisted LangGraph chat history
+│       ├── types/                # Strict TypeScript interfaces
+│       ├── App.tsx               # Main application router
+│       └── index.css             # Tailwind imports & global variables
+│
+└── backend/                      # FastAPI + LangGraph Server
+    ├── auth/                     # Supabase JWT verification interceptors
+    ├── graph/                    # The Agentic Brain
+    │   ├── nodes/                # Individual LangGraph execution blocks
+    │   │   ├── _llm.py           # Model bindings
+    │   │   ├── analog_analyzer.py
+    │   │   ├── chat_responder.py
+    │   │   ├── digital_validator.py
+    │   │   ├── hdl_compiler.py
+    │   │   ├── hitl.py           # Human-in-the-loop state suspension
+    │   │   └── ingestion_router.py
+    │   ├── edges.py              # Conditional routing edge logic
+    │   ├── graph.py              # Main StateGraph compiler topology
+    │   ├── runner.py             # Asynchronous graph executor (SSE streamer)
+    │   └── state.py              # TypedDict defining graph memory
+    ├── math_service/             # The Deterministic Engine (Zero Hallucination)
+    │   ├── ac_analysis.py        # AC nodal sweeps
+    │   ├── dc_analysis.py        # DC Operating Point (MNA)
+    │   ├── netlist_eval.py       # Async/Sync Sequential logic
+    │   ├── truth_table.py        # Boolean Algebra
+    │   ├── kmap_minimize.py      # Logic simplification
+    │   ├── bode.py               # Transfer function plotting
+    │   ├── fft.py                # Fast Fourier Transforms
+    │   └── bom.py                # Hardware cost optimizer
+    ├── main.py                   # FastAPI ASGI entry point
+    └── router.py                 # API endpoints (e.g. /api/agent/stream)
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Python 3.10+**
+- **Node.js 18+**
+- **Supabase account** (For JWT Authentication)
+- **LLM API Key** (Configured in backend `.env`)
+
+### Backend Setup
+
 ```bash
 cd backend
+
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # Or `venv\Scripts\activate` on Windows
+source venv/bin/activate  # or .\venv\Scripts\activate on Windows
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys (see Environment Variables section)
+
+# Start the server
 python -m uvicorn main:app --reload --port 8000
 ```
 
-### 2. Start the Frontend
-The frontend uses Vite for blazing-fast HMR.
+### Frontend Setup
+
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
+
+# Start dev server
 npm run dev
 ```
+
 The app will be available at `http://localhost:5173`.
+
+---
+
+## Environment Variables
+
+Create a `.env` file in the `backend/` root:
+
+```env
+# LLM Providers
+OPENAI_API_KEY=your_api_key
+# or
+GEMINI_API_KEY=your_api_key
+
+# Supabase Auth
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_JWT_SECRET=your_jwt_secret
+
+# App Config
+DEBUG_MODE=true
+```
+
+For the frontend, create `frontend/.env`:
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
+VITE_API_URL=http://localhost:8000
+```
+
+---
+
+## License
+
+This project is licensed under the MIT License.
+
+---
+
+<p align="center">
+  <sub>Engineered to bring the speed of software development to hardware design.</sub>
+</p>
