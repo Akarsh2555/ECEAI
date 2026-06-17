@@ -361,10 +361,6 @@ VITE_BACKEND_URL=http://localhost:8000
 
 ---
 
-## License
-
-This project is licensed under the MIT License.
-
 ---
 
 <p align="center">
