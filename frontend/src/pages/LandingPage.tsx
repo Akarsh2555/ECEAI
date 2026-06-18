@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { ArrowRight, Sparkles, Cpu, Activity, Shield, Bot } from 'lucide-react'
+import { ArrowRight, Sparkles, Zap, Cpu, Activity, Shield, Bot, Radio } from 'lucide-react'
 
 function HeroBackgroundGraphic() {
   return (
@@ -89,8 +89,8 @@ export function LandingPage() {
       {/* Main Navbar */}
       <nav className="relative z-50 flex items-center justify-between px-8 py-5">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-white flex items-center justify-center">
-            <Cpu className="w-4 h-4 text-black" />
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center">
+            <Zap className="w-4 h-4 text-white" />
           </div>
           <span className="text-white font-bold text-lg tracking-wide">ELECTO</span>
         </div>
@@ -275,7 +275,7 @@ export function LandingPage() {
           <div className="bg-[#121212] border border-white/5 rounded-[2rem] p-3 shadow-2xl shadow-black/50 hover:border-orange-500/30 transition-all duration-500 group">
             <div className="rounded-3xl overflow-hidden border border-white/5 bg-[#0a0a0a] relative">
               <div className="absolute inset-0 bg-gradient-to-t from-[#121212] to-transparent opacity-50 z-10"></div>
-              <img src="/digital-editor-preview.png" alt="Digital Circuit Editor" className="w-full h-auto object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" />
+              <img src="/analog-editor-preview.png" alt="Digital Circuit Editor" className="w-full h-auto object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" />
             </div>
             <div className="mt-6 px-5 pb-4">
               <div className="flex items-center gap-3 mb-3">
@@ -294,7 +294,7 @@ export function LandingPage() {
           <div className="bg-[#121212] border border-white/5 rounded-[2rem] p-3 shadow-2xl shadow-black/50 hover:border-orange-500/30 transition-all duration-500 group md:mt-12">
             <div className="rounded-3xl overflow-hidden border border-white/5 bg-[#0a0a0a] relative">
               <div className="absolute inset-0 bg-gradient-to-t from-[#121212] to-transparent opacity-50 z-10"></div>
-              <img src="/analog-editor-preview.png" alt="Analog Circuit Editor" className="w-full h-auto object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" />
+              <img src="/digital-editor-preview.png" alt="Analog Circuit Editor" className="w-full h-auto object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out" />
             </div>
             <div className="mt-6 px-5 pb-4">
               <div className="flex items-center gap-3 mb-3">
@@ -309,14 +309,33 @@ export function LandingPage() {
             </div>
           </div>
         </div>
+
+        {/* Card 3: Communication System — full width */}
+        <div className="mt-8 max-w-5xl mx-auto bg-[#121212] border border-white/5 rounded-[2rem] p-3 shadow-2xl shadow-black/50 hover:border-orange-500/30 transition-all duration-500 group">
+          <div className="rounded-3xl overflow-hidden border border-white/5 bg-[#0a0a0a] relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-[#121212] to-transparent opacity-50 z-10"></div>
+            <img src="/Screenshot 2026-06-18 162415.png" alt="Communication System Editor" className="w-full h-auto object-cover opacity-80 group-hover:opacity-100 group-hover:scale-[1.02] transition-all duration-700 ease-out" />
+          </div>
+          <div className="mt-6 px-5 pb-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+                <Radio size={14} className="text-orange-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-white">Communication Systems</h3>
+            </div>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Simulate and analyze AM/FM modulators, channel noise, mixers, and full transceiver chains with real-time spectral analysis.
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* Minimal Footer */}
       <footer className="relative z-10 border-t border-white/5 py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-white flex items-center justify-center">
-              <Cpu className="w-3 h-3 text-black" />
+            <div className="w-5 h-5 rounded-md bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center">
+              <Zap className="w-3 h-3 text-white" />
             </div>
             <span className="text-slate-300 font-semibold text-sm">ELECTO</span>
           </div>
